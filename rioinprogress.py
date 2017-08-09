@@ -236,16 +236,11 @@ def buildchamppool(suits, powers):
     
 #builds a pool of champ possibilities that excludes the atk champ
 def builddefenderpool(atksuppcombo, champpool):
-    defenderpool = []
+    defenderpool = champpool[:]
+    
     for x in champpool:
-        if x == atksuppcombo[0]:
-            pass
-        elif x == atksuppcombo[1]:
-            pass
-        elif x == atksuppcombo[2]:
-            pass
-        else:
-            defenderpool.append(x)
+        if x in atksuppcombo:
+            defenderpool.remove(x)
                 
     return defenderpool
     
@@ -259,19 +254,13 @@ def buildatkchampsupportpools(champ, atksuppsuits, defsuppsuits, powers):
     for suit in atksuppsuits:
         for power in powers:
             tempatkcombo = [suit, power]
-            if tempatkcombo == champ:
-                pass #or should this be pass?
-            
-            else:
+            if tempatkcombo != champ:
                 atksupppool.append(tempatkcombo)
         
     for suit in defsuppsuits:
         for power in powers:
             tempdefcombo = [suit, power]
-            if tempdefcombo == champ:
-                pass #or should this be pass?
-            
-            else:
+            if tempdefcombo != champ:
                 defsupppool.append(tempdefcombo)
                 
     return atksupppool, defsupppool
@@ -283,18 +272,20 @@ def createdefchampplussupportpool(defenderpool, atksuppcombo):
     alldefsuppcombos = []
     
     for x in defenderpool:
-        
+        #print x
         supppools = buildatkchampsupportpools(x, atksuits, defsuits, powers)
         
         for atkchamp in supppools[0]:
             if atkchamp in atksuppcombo and atkchamp != ['empty', 0]:
-                pass
-            else:          
-                for defchamp in supppools[1]:
-                    if defchamp in atksuppcombo and defchamp != ['empty', 0]:
-                        pass
-                    else:
-                        alldefsuppcombos.append([x, atkchamp, defchamp])        
+                supppools[0].remove(atkchamp)
+            
+        for defchamp in supppools[1]:
+            if defchamp in atksuppcombo and defchamp != ['empty', 0]:
+                supppools[1].remove(defchamp)
+
+        for atkchamp in supppools[0]:
+            for defchamp in supppools[1]:
+                alldefsuppcombos.append([x, atkchamp, defchamp])        
         
     #print alldefsuppcombos
     return alldefsuppcombos
@@ -319,14 +310,8 @@ def createatkdefchampplussupportspool(atkplussupppool, defplussupppool):
     finalpool = []
     
     for x in atkplussupppool:
-        #print 'next'
-        #print x
-        #print 'ef'
-        
+
         for y in defplussupppool:
-            
-            #print y
-            #if y[
             
             finalpool.append([x, y])
         
@@ -335,15 +320,52 @@ def createatkdefchampplussupportspool(atkplussupppool, defplussupppool):
 
 
 def resolveconflict(atkdefarray):
-    oppdie = None
-    bothdie = None
+    atkatk = atkdefarray[0][0]
+    atkdef = atkdefarray[0][1]
+    defatk = atkdefarray[1][0]
+    defdef = atkdefarray[1][1]
+    atkdie = None
+    defdie = None
+    resolved = False
+    i = 0
     
-    if atkdefarray[0][0] >= atkdefarray[1][1]:
-        oppdie = True
-    elif atkdefarray[1][0] >= atkdefarray[0][1]:
-        bothdie = True
+    while resolved == False and i < 20:
+        i += 1
+        
+        if (i * atkatk) >= defdef and (i * defatk) >= atkdef:
+            atkdie = True
+            defdie = True
+            resolved = True
+        
+        elif (i * atkatk) >= defdef and (i * defatk) < atkdef:
+            atkdie = False
+            defdie = True
+            resolved = True
+        
+        elif (i * atkatk) < defdef and (i * defatk) >= atkdef:
+            atkdie = True
+            defdie = False
+            resolved = True
     
-    return (oppdie, bothdie)
+    """
+    if (atkdefarray[0][1] / atkdefarray[1][0]) > (atkdefarray[1][1] / atkdefarray[0][0]) or \
+        ((atkdefarray[0][1] / atkdefarray[1][0]) == (atkdefarray[1][1] / atkdefarray[0][0]) and \
+        (atkdefarray[0][1] % atkdefarray[1][0]) > (atkdefarray[1][1] % atkdefarray[0][0])):
+        atkdie = False
+        defdie = True
+    
+    elif (atkdefarray[0][1] / atkdefarray[1][0]) == (atkdefarray[1][1] / atkdefarray[0][0]):
+        atkdie = True
+        defdie = True
+    
+    elif (atkdefarray[0][1] / atkdefarray[1][0]) < (atkdefarray[1][1] / atkdefarray[0][0]) or \
+        ((atkdefarray[0][1] / atkdefarray[1][0]) == (atkdefarray[1][1] / atkdefarray[0][0]) and \
+        (atkdefarray[0][1] % atkdefarray[1][0]) < (atkdefarray[1][1] % atkdefarray[0][0])):
+        atkdie = True
+        defdie = False
+    """
+    
+    return (atkdie, defdie)
 
 
 #need a fn that processes all fighting for each champ in the champ pool and records the result
@@ -356,81 +378,89 @@ def buildchampstatsdict(suits, atksuits, defsuits, powers):
                         }
     
     champpool = buildchamppool(suits, powers)
+    #print champpool
     
-    #champ = champpool[0]
+    
     for champ in champpool:
         matchups = 0
-        oppdiecount = 0
+        atkdiecount = 0
+        defdiecount = 0
         bothdiecount = 0
+        killandlivecount = 0
+        defwincount = 0
         
-    #    
         supportpools = buildatkchampsupportpools(champ, atksuits, defsuits, powers)
         atkplussupps = addsupports(champ, supportpools)
+        print '------------------------------------------'
+        print 'atkplussupps'
+        print atkplussupps
         
-        for atksuppcombo in atkplussupps:
+        for atksuppcombo in atkplussupps[:1]:
             
             defenderpool = builddefenderpool(atksuppcombo, champpool)
-            defplussupps = createdefchampplussupportpool(atksuppcombo, defenderpool)
+            defplussupps = createdefchampplussupportpool(defenderpool, atksuppcombo)
             finalpool = createatkdefchampplussupportspool(atkplussupps, defplussupps)
-        
-    #print defenderpool
-    #print atkplussupps
-    #print defplussupps
-    #print finalpool
-#        
+            
+            
+            print 'atksuppcombo'
+            print atksuppcombo
+            print 'defenderpool'
+            print defenderpool
+            print 'defplussupps'
+            print defplussupps
+            
+            #print atksuppcombo
+            #print defenderpool
+            #print defplussupps
+            
 
-            for matchup in finalpool:
-                #print matchup
+            for matchup in finalpool[:2]:
+                print 'matchup'
+                print matchup
+                
                 matchups += 1
     
                 powerlist = calculateatkdefpower(matchup)
                 print powerlist
+                
                 outcome = resolveconflict(powerlist)
+                print outcome
                 
-                if outcome == (True, True):
-                    oppdiecount += 1
+                if outcome == (False, True):
+                    defdiecount += 1
+                    killandlivecount += 1
+                
+                elif outcome == (True, True):
+                    atkdiecount += 1
+                    defdiecount += 1
                     bothdiecount += 1
-                
-                elif outcome == (None, True):
-                    bothdiecount += 1
-                
-                elif outcome == (True, None):
-                    oppdiecount += 1
+                    
+                elif outcome == (True, False):
+                    atkdiecount += 1
+                    defwincount += 1
+        
             
-        oppdiepercent = (oppdiecount / matchups * 100)
-        killandlivepercent = 100 - (bothdiecount / matchups * 100)
+        defdiepercent = float(defdiecount) / float(matchups) * 100.0
+        killandlivepercent = float(killandlivecount) / float(matchups) * 100.0
         
         champstatsdict['Champ'].append(champ)
-        champstatsdict['Kill Opponent %'].append(oppdiepercent)
+        champstatsdict['Kill Opponent %'].append(defdiepercent)
         champstatsdict['Kill Opponent and Live %'].append(killandlivepercent)
         
     print champstatsdict
     #return champstatsdict
 
-
-#Need to build python dictionary that can be read by pandas
-"""
-index will be champion?
-
-Champ       % kill opponent     % kill opp and live
-
-so, need a dictionary with 3 index values: champ, % kill opp, % kill opp & live
-
-alternatively, start off panda dataframe and add a new row each time champ stats are calculated
-
-"""
-
-
+###############################################################
     
-#next steps: FIGURE OUT WHY STATS ARE WRONG....################################
+#next steps: fix power calculation algorithm
 
 
 #"""
 
-suits = ['heart','club']
+suits = ['heart', 'club', 'diamond', 'spade']
 atksuits = ['club']
 defsuits = ['heart']
-powers = [1, 2]
+powers = [1]
 
 #combat multipliers
 atkmult = 2
@@ -450,18 +480,6 @@ finalpool = createatkdefchampplussupportspool(atkplussupps, defplussupps)
 #atkdefarray = calculateatkdefpower(finalpool)    #calcpower fn only works on one array at a time, finalpool is many arrays
 """
 
-
-#print champpool
-#print supportpools
-#print atkplussupps
-
-#print defenderpool
- 
-#print defplussupps
-
-#print finalpool
-#####WTF is wrong with finalpool?
-
 array = [[['diamond', 7],['club', 4],['heart', 10]],[['diamond', 7],['club', 4],['heart', 10]]]
 #calculateatkdefpower(array)
 
@@ -470,4 +488,11 @@ y = {
     'key': [1]
         }
         
-buildchampstatsdict(suits, atksuits, defsuits, powers)
+#buildchampstatsdict(suits, atksuits, defsuits, powers)
+a = [[2,3],[2,2]] #False, True
+b = [[2,6],[2,2]] #False, True
+c = [[2,3],[2,3]] #True, True
+d = [[2,4],[2,4]] #True, True
+e = [[2,5],[2,7]] #True, False
+f = [[6,3],[3,2]] #True, True
+g = [[2,8],[3,5]] #True, True
